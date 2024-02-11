@@ -1,0 +1,24 @@
+body {
+  margin: 0;
+}
+
+#cesiumContainer {
+  position: absolute;
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  overflow: hidden;
+}
+
+#menubar{
+  position: absolute;
+  top: 30px;
+  left: 20px;
+  background-color: rgba(100,100,100,0.8);
+  padding: 10px;
+}
+
+#upload_img{
+  display: none;;
+}

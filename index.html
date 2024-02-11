@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>cesium</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,minimum-scale=1,user-scalable=no">
+    <link rel="stylesheet" href="node_modules/cesium/Build/Cesium/Widgets/widgets.css">
+    <link rel="stylesheet" href="style.css">
+
+
+  </head>
+  <body>
+    <div id="cesiumContainer" class="cesium"></div>
+    <script src="node_modules/cesium/Build/Cesium/Cesium.js"></script>
+
+
+
+    
+
+
+    <div id = "menubar">
+      <div>
+        <div>降飴量</div>
+        <input id ="range_slide" type="range" min="0.0" max="1000.0" step="1" data-bind="value: height, valueUpdate: 'input'">
+      </div>
+      <div>
+        <select name="menu" id="menu">
+          <option value="img/candy.png">あめ</option>
+          <option value="img/heart_love.png">チョコ</option>
+          <option value="img/ringoame.png">りんご飴</option>
+          <option value="other">アップロード</option>
+        </select>
+        <input type="file" id="upload_img" name="upload_img" accept="image/png, image/jpeg" />
+      </div>
+      <div>
+        <button id="button_reset">リセット</button>
+      </div>
+    </div>
+
+
+  
+
+<script id="cesium_sandcastle_script">
+      window.startup = async function (Cesium) {
+        "use strict";
+        //Sandcastle_Begin
+        const viewer = new Cesium.Viewer("cesiumContainer", {
+          shouldAnimate: true,
+          terrain: Cesium.Terrain.fromWorldTerrain(),
+        });
+
+        viewer.camera.setView({
+          destination: Cesium.Cartesian3.fromDegrees(141.36219718357623,43.003309540938694, 10000),
+          orientation: {
+            heading: 0, // 水平方向の回転度（ラジアン）
+            pitch: -0.7, // 垂直方向の回転度（ラジアン） 上を見上げたり下を見下ろしたり
+            roll: 0
+          }
+        });
+
+        const scene = viewer.scene;
+        scene.globe.depthTestAgainstTerrain = true;
+        
+
+
+        // rain
+        const snowParticleSize = 12.0;
+        const snowRadius = 100000.0;
+        const minimumSnowImageSize = new Cesium.Cartesian2(
+          snowParticleSize,
+          snowParticleSize
+        );
+        
+        const maximumSnowImageSize = new Cesium.Cartesian2(
+          snowParticleSize * 2.0,
+          snowParticleSize * 2.0
+        );
+        let snowGravityScratch = new Cesium.Cartesian3();
+        const snowUpdate = function (particle, dt) {
+          snowGravityScratch = Cesium.Cartesian3.normalize(
+            particle.position,
+            snowGravityScratch
+          );
+          Cesium.Cartesian3.multiplyByScalar( //重力の強さ
+            snowGravityScratch,
+            Cesium.Math.randomBetween(-10.0, -50.0),
+            snowGravityScratch
+          );
+          particle.velocity = Cesium.Cartesian3.add(
+            particle.velocity,
+            snowGravityScratch,
+            particle.velocity
+          );
+          
+
+          particle.endColor.alpha = 0.6;
+
+
+          //particle.startColor.red= Math.floor( Math.random()  *100)/100;
+          //particle.startColor.green = Math.floor( Math.random()  *100)/100;
+          //particle.startColor.blue= Math.floor( Math.random()  *100)/100;
+          
+          };
+
+        // rain
+        
+        function startCandy(image_file,type) {
+          let col;
+          if(type=="reset"){
+            col = scene.primitives._primitives[0].startColor;
+          }else if(type=="file"){
+            col = Cesium.Color.WHITE.withAlpha(1.0);
+          }else{
+            let rand_red= Math.floor( Math.random()  *100)/100;
+            let rand_green = Math.floor( Math.random()  *100)/100;
+            let rand_blue= Math.floor( Math.random()  *100)/100;
+            col = new Cesium.Color(rand_red, rand_green, rand_blue, 1);
+          } 
+          scene.primitives.removeAll();
+          scene.primitives.add(
+            new Cesium.ParticleSystem({
+              modelMatrix: new Cesium.Matrix4.fromTranslation(
+                scene.camera.position
+              ),
+              minimumSpeed: 1.0,
+              maximumSpeed: 2.0,
+              lifetime: 15.0,
+              emitter: new Cesium.SphereEmitter(snowRadius),
+              startScale: 2,
+              endScale: 1.0,
+              image: image_file,
+              emissionRate: 700.0,
+              startColor: col,
+              endColor: Cesium.Color.WHITE.withAlpha(1.0),
+              minimumImageSize: minimumSnowImageSize,
+              maximumImageSize: maximumSnowImageSize,
+              updateCallback: snowUpdate,
+            })
+          );
+
+          scene.skyAtmosphere.hueShift = -0.8;
+          scene.skyAtmosphere.saturationShift = -0.7;
+          scene.skyAtmosphere.brightnessShift = -0.33;
+          scene.fog.density = 0.001;
+          scene.fog.minimumBrightness = 0.8;
+        }
+
+
+
+        //range
+        document.getElementById("range_slide").addEventListener("input", function () {
+          let rangeValue = document.getElementById("range_slide").value;
+          scene.primitives._primitives[0].emissionRate = rangeValue;
+        });
+
+        //reset button
+        document.getElementById("button_reset").addEventListener("click", function () {
+          let value = scene.primitives._primitives[0].image;
+          startCandy(value,"reset");
+          
+        });
+
+        //select menu
+        document.getElementById("menu").addEventListener("change", function () {
+          if(document.getElementById("menu").value=="other"){
+            document.getElementById("upload_img").style.display = "block";
+          }else{
+            document.getElementById("upload_img").style.display = "none";
+            let value = document.getElementById("menu").value;
+            startCandy(value,"menu");
+          }
+        });
+
+        //uploaded file
+        document.getElementById("upload_img").addEventListener("change", function () {
+          let file = document.getElementById("upload_img").files[0];
+          let reader = new FileReader();
+          reader.readAsDataURL(file);
+          reader.onload = function () {
+            let value = reader.result;
+            startCandy(value,"file");
+          };
+        });
+
+        startCandy(document.getElementById("menu").value,"menu")
+      };
+
+
+
+
+      if (typeof Cesium !== "undefined") {
+        window.startupCalled = true;
+        window.startup(Cesium).catch((error) => {
+          "use strict";
+          console.error(error);
+        });
+        //Sandcastle.finishedLoading();
+      }
+    </script>
+  </body>
+</html>
