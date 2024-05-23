@@ -12,6 +12,6 @@
     "vite": "^5.0.8"
   },
   "dependencies": {
-    "cesium": "^1.114.0"
+    "cesium": "^1.117.0"
   }
 }
